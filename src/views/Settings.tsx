@@ -1,17 +1,51 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getState, newId, remove, upsert, useStore, type Language, type Profile } from "../lib/store";
 import { supabase } from "../lib/supabase";
 import { dayKey, streak } from "../lib/srs";
 import { TTS_OPTIONS } from "../lib/speech";
 import { Confirm, Seg, Tag, toast } from "../components/ui";
 import { ProfileForm } from "./Profiles";
+import { ensureParent, isParentUnlocked, parentPinHash, setParentPin, unlockParent } from "../lib/pin";
+import { PinSetup } from "../components/PinModal";
 
 type Tab = "family" | "profiles" | "languages" | "account";
 
 export function Settings() {
   const [tab, setTab] = useState<Tab>("family");
+  const schemaOutdated = useStore((s) => s.schemaOutdated);
+  const hasPin = useStore(() => !!parentPinHash());
+  const [unlocked, setUnlocked] = useState(isParentUnlocked());
+
+  useEffect(() => {
+    if (!unlocked && hasPin) ensureParent().then(setUnlocked);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!schemaOutdated && !hasPin) {
+    return (
+      <section className="card grid narrow">
+        <h2>Eltern-PIN festlegen</h2>
+        <p className="muted" style={{ margin: 0 }}>Mit der Eltern-PIN schützt du diesen Bereich: Profile, Sprachen, Abmelden sowie das Löschen von Lektionen. Die Kinder lernen ganz normal weiter.</p>
+        <PinSetup title="Neue Eltern-PIN" onDone={async (pin) => { await setParentPin(pin); unlockParent(); setUnlocked(true); toast("Eltern-PIN gespeichert"); }} />
+      </section>
+    );
+  }
+  if (hasPin && !unlocked) {
+    return (
+      <section className="card grid narrow" style={{ justifyItems: "center", textAlign: "center" }}>
+        <h2>🔒 Elternbereich</h2>
+        <p className="muted" style={{ margin: 0 }}>Dieser Bereich ist mit der Eltern-PIN geschützt.</p>
+        <button className="btn primary" onClick={() => ensureParent().then(setUnlocked)}>PIN eingeben</button>
+      </section>
+    );
+  }
   return (
     <div className="grid narrow">
+      {schemaOutdated && (
+        <div className="notice err">
+          Für die PINs fehlt noch ein Datenbank-Update: Öffne in Supabase den SQL Editor, füge den Inhalt von
+          {" "}<code>supabase/migrations/0002_pins.sql</code> ein und klicke auf „Run“. Danach die App neu laden.
+        </div>
+      )}
       <Seg value={tab} options={[["family", "Übersicht"], ["profiles", "Profile"], ["languages", "Sprachen"], ["account", "Konto"]]} onChange={setTab} />
       {tab === "family" && <Family />}
       {tab === "profiles" && <ProfilesAdmin />}
@@ -150,7 +184,16 @@ function Account() {
         <input type="password" placeholder="Neues Passwort" minLength={6} value={pw} onChange={(e) => setPw(e.target.value)} style={{ maxWidth: 260 }} aria-label="Neues Passwort" autoComplete="new-password" />
         <button className="btn" disabled={pw.length < 6}>Passwort ändern</button>
       </form>
+      <ParentPinChange />
       <div><button className="btn" onClick={() => supabase.auth.signOut()} disabled={pending > 0} title={pending ? "Erst abmelden, wenn alles übertragen ist" : ""}>Abmelden</button></div>
     </section>
   );
+}
+
+function ParentPinChange() {
+  const schemaOutdated = useStore((s) => s.schemaOutdated);
+  const [open, setOpen] = useState(false);
+  if (schemaOutdated) return null;
+  if (!open) return <div><button className="btn" onClick={() => setOpen(true)}>Eltern-PIN ändern</button></div>;
+  return <PinSetup title="Neue Eltern-PIN" onCancel={() => setOpen(false)} onDone={async (pin) => { await setParentPin(pin); setOpen(false); toast("Eltern-PIN geändert"); }} />;
 }

@@ -5,6 +5,7 @@ import { BOX_COLORS, isDue, shuffle } from "../lib/srs";
 import { normalize } from "../lib/check";
 import { Quiz, Summary, type QuizItem, type QuizMode, type QuizResult } from "../components/Quiz";
 import { Confirm, Seg, Tag, toast } from "../components/ui";
+import { ensureParent } from "../lib/pin";
 
 type Dir = "auto" | "de" | "fs" | "mix";
 
@@ -198,8 +199,8 @@ function UnitBlock({ unit, cards, profile, open, onLearn }: { unit: Unit; cards:
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} aria-label="Name der Lektion" style={{ maxWidth: 240 }} />
           {name.trim() && name !== unit.name && <button className="btn sm" onClick={() => upsert("units", [{ ...unit, name: name.trim() }])}>Umbenennen</button>}
           <span className="spacer" />
-          <Confirm label="Lernstand zurücksetzen" confirmLabel="Ja, zurücksetzen" onConfirm={resetProgress} />
-          <Confirm label="Lektion löschen" onConfirm={() => { remove("units", [unit]); toast("Lektion gelöscht"); }} />
+          <Confirm label="Lernstand zurücksetzen" confirmLabel="Ja, zurücksetzen" onConfirm={async () => { if (await ensureParent()) resetProgress(); }} />
+          <Confirm label="Lektion löschen" onConfirm={async () => { if (await ensureParent()) { remove("units", [unit]); toast("Lektion gelöscht"); } }} />
         </div>
       </div>
     </details>

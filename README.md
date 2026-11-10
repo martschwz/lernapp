@@ -14,7 +14,8 @@ Lern-App für die ganze Familie: Vokabeln (Englisch, Latein, Polnisch, Schlesisc
 ### 1. Datenbank anlegen
 1. In Supabase das Projekt öffnen, links **SQL Editor** → **New query**.
 2. Den kompletten Inhalt von [`supabase/migrations/0001_init.sql`](supabase/migrations/0001_init.sql) einfügen und auf **Run** klicken.
-3. Es sollte „Success. No rows returned“ erscheinen.
+3. Es sollte „Success. No rows returned“ erscheinen. Fragt Supabase nach „Run and enable RLS“, diesen Knopf wählen.
+4. Danach genauso mit [`supabase/migrations/0002_pins.sql`](supabase/migrations/0002_pins.sql) (Eltern- und Kinder-PINs).
 
 ### 2. Anmeldung einstellen
 In Supabase unter **Authentication → URL Configuration**:

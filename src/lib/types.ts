@@ -5,6 +5,7 @@ export type Profile = {
   grade: number; // 0 = erwachsen
   daily_goal: number;
   subjects: string[]; // "lang" | "math"
+  pin_hash?: string | null; // PIN des Profils (gehasht), null = keine PIN
   created_at?: string;
 };
 
@@ -55,7 +56,13 @@ export type Activity = {
   correct: number;
 };
 
+export type FamilySettings = {
+  owner: string;
+  parent_pin_hash: string | null;
+};
+
 export type Tables = {
+  family_settings: FamilySettings;
   profiles: Profile;
   languages: Language;
   units: Unit;

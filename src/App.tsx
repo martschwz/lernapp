@@ -9,6 +9,8 @@ import { Import } from "./views/Import";
 import { MathTrainer } from "./views/Math";
 import { Settings } from "./views/Settings";
 import { Toaster } from "./components/ui";
+import { PinModal } from "./components/PinModal";
+import { lockParent } from "./lib/pin";
 
 export type View = "home" | "learn" | "words" | "math" | "import" | "settings" | "pick";
 
@@ -32,7 +34,7 @@ export default function App() {
   if (!session) return <><Login /><Toaster /></>;
   if (!loaded) return <main className="wrap"><div className="card narrow">Wird geladen …</div></main>;
 
-  const go = (v: View, opts?: { languageId?: string }) => { setLangId(opts?.languageId); setView(v); setNonce((n) => n + 1); window.scrollTo(0, 0); };
+  const go = (v: View, opts?: { languageId?: string }) => { if (v !== "settings") lockParent(); setLangId(opts?.languageId); setView(v); setNonce((n) => n + 1); window.scrollTo(0, 0); };
   const showPicker = !profile || view === "pick";
   const tabs: [View, string][] = profile ? [
     ["home", "Heute"],
@@ -73,6 +75,7 @@ export default function App() {
           </div>
         )}
       </main>
+      <PinModal />
       <Toaster />
     </>
   );

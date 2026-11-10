@@ -14,19 +14,21 @@ export type State = {
   authReady: boolean;
   loaded: boolean;
   loadError: string | null;
+  schemaOutdated: boolean; // Datenbank-Update (0002_pins.sql) fehlt noch
   data: Data;
   activeProfileId: string | null;
   pending: number;
   online: boolean;
 };
 
-const emptyData = (): Data => ({ profiles: [], languages: [], units: [], cards: [], progress: [], activity: [] });
+const emptyData = (): Data => ({ family_settings: [], profiles: [], languages: [], units: [], cards: [], progress: [], activity: [] });
 
 let state: State = {
   session: null,
   authReady: false,
   loaded: false,
   loadError: null,
+  schemaOutdated: false,
   data: emptyData(),
   activeProfileId: null,
   pending: 0,
@@ -50,6 +52,7 @@ export function useStore<T>(sel: (s: State) => T): T {
 
 /* ---------- Schlüssel der Tabellen ---------- */
 const PK: { [K in TableName]: (keyof Tables[K])[] } = {
+  family_settings: ["owner"],
   profiles: ["id"],
   languages: ["id"],
   units: ["id"],
@@ -185,6 +188,8 @@ export const newId = () => crypto.randomUUID();
 
 /* ---------- Laden ---------- */
 const TABLES: TableName[] = ["profiles", "languages", "units", "cards", "progress", "activity"];
+// Tabellen aus späteren Datenbank-Updates: fehlen sie, läuft die App trotzdem weiter
+const OPTIONAL_TABLES: TableName[] = ["family_settings"];
 
 async function fetchAll<K extends TableName>(t: K): Promise<Tables[K][]> {
   const out: Tables[K][] = [];
@@ -210,6 +215,15 @@ export async function loadAll() {
     const results = await Promise.all(TABLES.map((t) => fetchAll(t)));
     const data = emptyData();
     TABLES.forEach((t, i) => ((data as Record<TableName, unknown[]>)[t] = results[i]));
+    let schemaOutdated = false;
+    for (const t of OPTIONAL_TABLES) {
+      try {
+        (data as Record<TableName, unknown[]>)[t] = await fetchAll(t);
+      } catch {
+        schemaOutdated = true;
+      }
+    }
+    set({ schemaOutdated });
     // Noch nicht hochgeladene Änderungen beibehalten
     for (const op of outbox) {
       const list = data[op.t] as unknown as Record<string, unknown>[];

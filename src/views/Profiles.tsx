@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { newId, remove, setActiveProfile, upsert, useStore, type Profile } from "../lib/store";
+import { ensureParent, ensureProfilePin, hashPin } from "../lib/pin";
+import { PinSetup } from "../components/PinModal";
 import { Confirm, toast } from "../components/ui";
 
 export const AVATARS = ["🦊", "🐼", "🐯", "🦁", "🐸", "🐙", "🦄", "🐬", "🦉", "🐢", "🚀", "⚽", "🌻", "🎸", "🐱", "🐶"];
@@ -15,15 +17,15 @@ export function ProfilePicker({ onPicked }: { onPicked?: () => void }) {
       {profiles.length > 0 && (
         <div className="pick">
           {sorted.map((p) => (
-            <button key={p.id} onClick={() => { setActiveProfile(p.id); onPicked?.(); }}>
-              <span className="avatar">{p.avatar}</span>{p.name}
+            <button key={p.id} onClick={async () => { if (await ensureProfilePin(p.name, p.pin_hash)) { setActiveProfile(p.id); onPicked?.(); } }}>
+              <span className="avatar">{p.avatar}</span>{p.name}{p.pin_hash ? " 🔒" : ""}
               <span className="small muted">{p.grade ? `Klasse ${p.grade}` : "Erwachsen"}</span>
             </button>
           ))}
         </div>
       )}
       {adding ? <ProfileForm onSaved={(p) => { setAdding(false); if (!profiles.length) setActiveProfile(p.id); }} onCancel={profiles.length ? () => setAdding(false) : undefined} />
-        : <div className="row" style={{ justifyContent: "center" }}><button className="btn" onClick={() => setAdding(true)}>+ Profil hinzufügen</button></div>}
+        : <div className="row" style={{ justifyContent: "center" }}><button className="btn" onClick={async () => { if (await ensureParent()) setAdding(true); }}>+ Profil hinzufügen</button></div>}
     </div>
   );
 }
@@ -34,11 +36,16 @@ export function ProfileForm({ profile, onSaved, onCancel }: { profile?: Profile;
   const [grade, setGrade] = useState(profile?.grade ?? 6);
   const [goal, setGoal] = useState(profile?.daily_goal ?? 20);
   const [subjects, setSubjects] = useState<string[]>(profile?.subjects ?? ["lang", "math"]);
+  const schemaOutdated = useStore((st) => st.schemaOutdated);
+  const [pinHash, setPinHash] = useState<string | null | undefined>(profile?.pin_hash);
+  const [settingPin, setSettingPin] = useState(false);
   const toggle = (s: string) => setSubjects((x) => (x.includes(s) ? x.filter((y) => y !== s) : [...x, s]));
   function save(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
     const p: Profile = { ...(profile ?? { id: newId(), created_at: new Date().toISOString() }), name: name.trim(), avatar, grade, daily_goal: goal, subjects };
+    // pin_hash nur mitschicken, wenn die Datenbank die Spalte schon kennt
+    if (!schemaOutdated && pinHash !== undefined) p.pin_hash = pinHash;
     upsert("profiles", [p]);
     toast(profile ? "Gespeichert" : `Profil „${p.name}“ angelegt`);
     onSaved?.(p);
@@ -62,6 +69,19 @@ export function ProfileForm({ profile, onSaved, onCancel }: { profile?: Profile;
         <label className="row small"><input type="checkbox" checked={subjects.includes("lang")} onChange={() => toggle("lang")} /> Sprachen</label>
         <label className="row small"><input type="checkbox" checked={subjects.includes("math")} onChange={() => toggle("math")} /> Mathe</label>
       </div>
+      {!schemaOutdated && (
+        settingPin ? (
+          <PinSetup title={`PIN für ${name || "dieses Profil"}`} onCancel={() => setSettingPin(false)}
+            onDone={async (pin) => { setPinHash(await hashPin(pin)); setSettingPin(false); }} />
+        ) : (
+          <div className="row">
+            <span className="small muted" style={{ fontWeight: 700 }}>PIN:</span>
+            <span className="small">{pinHash ? "aktiv – beim Profilwechsel wird nach der PIN gefragt" : "keine"}</span>
+            <button type="button" className="btn sm" onClick={() => setSettingPin(true)}>{pinHash ? "PIN ändern" : "PIN festlegen"}</button>
+            {pinHash && <button type="button" className="btn sm ghost" onClick={() => setPinHash(null)}>PIN entfernen</button>}
+          </div>
+        )
+      )}
       <div className="row">
         {profile && <Confirm label="Profil löschen" confirmLabel="Profil und Lernstand löschen" onConfirm={() => { remove("profiles", [profile]); toast("Profil gelöscht"); onSaved?.(profile); }} />}
         <span className="spacer" />
