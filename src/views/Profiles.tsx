@@ -2,7 +2,7 @@ import { useState } from "react";
 import { newId, remove, setActiveProfile, upsert, useStore, type Profile } from "../lib/store";
 import { ensureParent, ensureProfilePin, hashPin } from "../lib/pin";
 import { PinSetup } from "../components/PinModal";
-import { Confirm, toast } from "../components/ui";
+import { Confirm, toast, NumberField } from "../components/ui";
 
 export const AVATARS = ["🦊", "🐼", "🐯", "🦁", "🐸", "🐙", "🦄", "🐬", "🦉", "🐢", "🚀", "⚽", "🌻", "🎸", "🐱", "🐶"];
 export const GRADES: [number, string][] = [[0, "Erwachsen"], ...Array.from({ length: 13 }, (_, i) => [i + 1, `Klasse ${i + 1}`] as [number, string])];
@@ -58,7 +58,7 @@ export function ProfileForm({ profile, onSaved, onCancel }: { profile?: Profile;
         <label className="f">Klassenstufe
           <select value={grade} onChange={(e) => setGrade(Number(e.target.value))}>{GRADES.map(([g, l]) => <option key={g} value={g}>{l}</option>)}</select>
         </label>
-        <label className="f">Tagesziel (Abfragen)<input type="number" min={5} max={300} value={goal} onChange={(e) => setGoal(Number(e.target.value) || 20)} /></label>
+        <NumberField label="Tagesziel (Abfragen)" value={goal} min={5} max={300} onChange={setGoal} />
       </div>
       <div className="grid" style={{ gap: 6 }}>
         <span className="small muted" style={{ fontWeight: 700 }}>Bild</span>

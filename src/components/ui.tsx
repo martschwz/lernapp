@@ -63,3 +63,19 @@ export function Confirm({ label, confirmLabel = "Ja, löschen", onConfirm }: { l
     </span>
   );
 }
+
+/** Zahlenfeld, das man beim Tippen auch kurz leeren kann. Grenzen werden beim Verlassen des Felds angewendet. */
+export function NumberField({ label, value, min, max, onChange, style }: {
+  label: string; value: number; min: number; max: number; onChange: (n: number) => void; style?: React.CSSProperties;
+}) {
+  const [text, setText] = useState(String(value));
+  useEffect(() => { setText((t) => (Number(t) === value ? t : String(value))); }, [value]);
+  const clamp = (n: number) => Math.min(max, Math.max(min, n));
+  return (
+    <label className="f" style={style}>{label}
+      <input type="number" inputMode="numeric" min={min} max={max} value={text}
+        onChange={(e) => { setText(e.target.value); const n = parseInt(e.target.value, 10); if (!isNaN(n) && n >= min) onChange(clamp(n)); }}
+        onBlur={() => { const n = parseInt(text, 10); const v = isNaN(n) ? value : clamp(n); setText(String(v)); onChange(v); }} />
+    </label>
+  );
+}

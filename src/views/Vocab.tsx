@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
-import { getState, newId, remove, upsert, useStore, type Card, type Profile, type Unit } from "../lib/store";
+import { getState, moveUnits, newId, remove, upsert, useStore, type Card, type Profile, type Unit } from "../lib/store";
 import { cardKey, cardsOf, dueCount, langsOfProfile, type CardWithCtx } from "../lib/selectors";
 import { BOX_COLORS, isDue, shuffle } from "../lib/srs";
 import { normalize } from "../lib/check";
 import { Quiz, Summary, type QuizItem, type QuizMode, type QuizResult } from "../components/Quiz";
-import { Confirm, Seg, Tag, toast } from "../components/ui";
+import { Confirm, Seg, Tag, toast, NumberField } from "../components/ui";
 import { ensureParent } from "../lib/pin";
 
 type Dir = "auto" | "de" | "fs" | "mix";
@@ -55,7 +55,7 @@ export function Learn({ profile, initialLanguageId, onHome }: { profile: Profile
     if (!pool) {
       if (sel === "due") p = p.filter((c) => isDue(c.p));
       else if (sel !== "all") p = p.filter((c) => c.unit.id === sel);
-      p = shuffle(p).sort((a, b) => Number(isDue(b.p)) - Number(isDue(a.p)) || (a.p?.box ?? 0) - (b.p?.box ?? 0)).slice(0, Math.max(5, Math.min(100, size)));
+      p = shuffle(p).sort((a, b) => Number(isDue(b.p)) - Number(isDue(a.p)) || (a.p?.box ?? 0) - (b.p?.box ?? 0)).slice(0, Math.max(3, Math.min(100, size)));
     }
     if (!p.length) { toast("Keine Vokabeln für diese Auswahl"); return; }
     setResult(null);
@@ -88,7 +88,7 @@ export function Learn({ profile, initialLanguageId, onHome }: { profile: Profile
         <Seg value={dir} options={[["auto", "Empfohlen"], ["de", `Deutsch → ${lang.name}`], ["fs", `${lang.name} → Deutsch`], ["mix", "Gemischt"]]} onChange={setDir} />
         <span className="small muted">Empfohlen für {lang.name}: {lang.default_dir === "fs" ? `${lang.name} → Deutsch` : `Deutsch → ${lang.name}`} (änderbar in den Einstellungen)</span>
       </div>
-      <label className="f" style={{ maxWidth: 200 }}>Karten pro Runde<input type="number" min={5} max={100} value={size} onChange={(e) => setSize(Number(e.target.value) || 20)} /></label>
+      <NumberField label="Karten pro Runde" value={size} min={3} max={100} onChange={setSize} style={{ maxWidth: 200 }} />
       <div><button className="btn primary big" onClick={() => start()}>Runde starten</button></div>
     </section>
   );
@@ -198,6 +198,10 @@ function UnitBlock({ unit, cards, profile, open, onLearn }: { unit: Unit; cards:
           <button className="btn sm" onClick={onLearn}>Diese Lektion üben</button>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)} aria-label="Name der Lektion" style={{ maxWidth: 240 }} />
           {name.trim() && name !== unit.name && <button className="btn sm" onClick={() => upsert("units", [{ ...unit, name: name.trim() }])}>Umbenennen</button>}
+          <select value={unit.language_id} aria-label="Sprache der Lektion" style={{ width: "auto" }}
+            onChange={(e) => { moveUnits([unit.id], e.target.value); toast("Lektion verschoben"); }}>
+            {s.data.languages.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
           <span className="spacer" />
           <Confirm label="Lernstand zurücksetzen" confirmLabel="Ja, zurücksetzen" onConfirm={async () => { if (await ensureParent()) resetProgress(); }} />
           <Confirm label="Lektion löschen" onConfirm={async () => { if (await ensureParent()) { remove("units", [unit]); toast("Lektion gelöscht"); } }} />

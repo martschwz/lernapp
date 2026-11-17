@@ -6,7 +6,7 @@ import { BOX_COLORS, boxLabel, isDue, shuffle } from "../lib/srs";
 import { checkForm, verbKey, VERBS, type Verb } from "../lib/verbs";
 import { canSpeak, speak } from "../lib/speech";
 import { Summary, type QuizItem, type QuizResult } from "../components/Quiz";
-import { Kasten, Seg, SpeakerIcon, Tag } from "../components/ui";
+import { Kasten, Seg, SpeakerIcon, Tag, NumberField } from "../components/ui";
 
 type Mode = "past" | "both" | "de";
 type Field = "inf" | "past" | "part";
@@ -54,7 +54,7 @@ export function VerbTrainer({ profile, onHome }: { profile: Profile; onHome: () 
           <span className="small muted">{mode === "past" ? "Beispiel: go → went" : mode === "both" ? "Beispiel: go → went → gone" : "Beispiel: gehen → go → went → gone"}</span>
         </div>
         <div className="row">
-          <label className="f" style={{ maxWidth: 160 }}>Verben pro Runde<input type="number" min={3} max={50} value={size} onChange={(e) => setSize(Number(e.target.value) || 10)} /></label>
+          <NumberField label="Verben pro Runde" value={size} min={3} max={50} onChange={setSize} style={{ maxWidth: 160 }} />
           <span className="spacer" />
           <button className="btn primary big" onClick={() => start()}>Los geht's{due ? ` (${due} fällig)` : ""}</button>
         </div>

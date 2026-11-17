@@ -4,7 +4,7 @@ import { progressMap } from "../lib/selectors";
 import { BOX_COLORS, isDue, shuffle } from "../lib/srs";
 import { allKeys, CORE_ROWS, itemFromKey, plusMinusItem, ROWS, TOPICS, type MathTopic } from "../lib/math";
 import { Quiz, Summary, type QuizItem, type QuizResult } from "../components/Quiz";
-import { Kasten, Seg } from "../components/ui";
+import { Kasten, Seg, NumberField } from "../components/ui";
 import { boxCounts } from "../lib/selectors";
 
 export function MathTrainer({ profile, onHome }: { profile: Profile; onHome: () => void }) {
@@ -64,7 +64,7 @@ export function MathTrainer({ profile, onHome }: { profile: Profile; onHome: () 
           </div>
         )}
         <div className="row">
-          <label className="f" style={{ maxWidth: 160 }}>Aufgaben pro Runde<input type="number" min={5} max={50} value={size} onChange={(e) => setSize(Number(e.target.value) || 10)} /></label>
+          <NumberField label="Aufgaben pro Runde" value={size} min={3} max={50} onChange={setSize} style={{ maxWidth: 160 }} />
           <span className="spacer" />
           <button className="btn primary big" onClick={() => start()}>Los geht's{dueN ? ` (${dueN} fällig)` : ""}</button>
         </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getState, newId, remove, upsert, useStore, type Language, type Profile } from "../lib/store";
+import { duplicateLanguages, getState, mergeDuplicateLanguages, mergeLanguage, newId, remove, upsert, useStore, type Language, type Profile } from "../lib/store";
 import { supabase } from "../lib/supabase";
 import { dayKey, streak } from "../lib/srs";
 import { TTS_OPTIONS } from "../lib/speech";
@@ -116,11 +116,19 @@ function ProfilesAdmin() {
 
 function Languages() {
   const langs = useStore((s) => s.data.languages);
+  useStore((s) => s.data.units);
+  const dups = duplicateLanguages();
   const [edit, setEdit] = useState<string | null>(null);
   const blank: Language = { id: "", name: "", short: "", tts: null, chars: "", info_label: "Hinweis", lenient: false, color: "#5b6782", default_dir: "de" };
   return (
     <>
       <p className="small muted" style={{ margin: 0 }}>Sprachen gelten für die ganze Familie. Sonderzeichen erscheinen beim Eintippen als Tasten.</p>
+      {dups.length > 0 && (
+        <div className="notice row">
+          <span>Doppelt vorhanden: {dups.map((g) => `${g[0].name} (${g.length}×)`).join(", ")}. Beim Zusammenführen bleiben alle Lektionen, Vokabeln und der Lernstand erhalten.</span>
+          <button className="btn sm primary" onClick={() => toast(`${mergeDuplicateLanguages()} doppelte Sprachen zusammengeführt`)}>Zusammenführen</button>
+        </div>
+      )}
       {[...langs].sort((a, b) => a.name.localeCompare(b.name, "de")).map((l) => edit === l.id
         ? <LangForm key={l.id} lang={l} onDone={() => setEdit(null)} />
         : (
@@ -146,6 +154,8 @@ function LangForm({ lang, onDone }: { lang: Language; onDone: () => void }) {
     onDone();
   }
   const used = useStore((s) => s.data.units.filter((u) => u.language_id === lang.id).length);
+  const others = useStore((s) => s.data.languages).filter((o) => o.id !== lang.id);
+  const [mergeTo, setMergeTo] = useState("");
   return (
     <form className="card grid" onSubmit={save}>
       <div className="fields">
@@ -158,6 +168,16 @@ function LangForm({ lang, onDone }: { lang: Language; onDone: () => void }) {
         <label className="f">Empfohlene Richtung<select value={v.default_dir} onChange={(e) => f("default_dir", e.target.value as "de" | "fs")}><option value="de">Deutsch → {v.name || "Fremdsprache"}</option><option value="fs">{v.name || "Fremdsprache"} → Deutsch</option></select></label>
       </div>
       <label className="row small"><input type="checkbox" checked={v.lenient} onChange={(e) => f("lenient", e.target.checked)} /> Großzügige Prüfung der Schreibweise (z. B. für Sprachen ohne feste Rechtschreibung)</label>
+      {lang.id && others.length > 0 && (
+        <div className="row small">
+          <span>Alle Lektionen verschieben nach</span>
+          <select value={mergeTo} onChange={(e) => setMergeTo(e.target.value)} style={{ width: "auto" }} aria-label="Ziel-Sprache">
+            <option value="">– Sprache wählen –</option>
+            {others.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+          {mergeTo && <Confirm label="und diese Sprache löschen" confirmLabel="Ja, verschieben" onConfirm={() => { mergeLanguage(lang, others.find((o) => o.id === mergeTo)!); toast("Lektionen verschoben"); onDone(); }} />}
+        </div>
+      )}
       <div className="row">
         {lang.id && <Confirm label="Sprache löschen" confirmLabel={used ? `Mit ${used} Lektionen löschen` : "Ja, löschen"} onConfirm={() => { remove("languages", [lang]); onDone(); }} />}
         <span className="spacer" /><button type="button" className="btn ghost" onClick={onDone}>Abbrechen</button><button className="btn primary">Speichern</button>

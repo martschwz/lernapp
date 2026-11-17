@@ -203,7 +203,14 @@ async function fetchAll<K extends TableName>(t: K): Promise<Tables[K][]> {
   return out;
 }
 
-export async function loadAll() {
+let loading: Promise<void> | null = null;
+/** Lädt alle Daten. Läuft nie doppelt gleichzeitig (sonst würden z. B. Startsprachen zweimal angelegt). */
+export function loadAll(): Promise<void> {
+  if (!loading) loading = loadAllOnce().finally(() => { loading = null; });
+  return loading;
+}
+
+async function loadAllOnce() {
   if (!state.session) return;
   // Sofort aus dem Gerätespeicher anzeigen, dann frisch laden
   const cached = readLS<Data | null>(cacheKey(), null);
@@ -233,7 +240,7 @@ export async function loadAll() {
     }
     set({ data, loaded: true, loadError: null });
     persistCache();
-    if (!data.languages.length) seedLanguages();
+    if (!data.languages.length && !outbox.some((o) => o.t === "languages")) seedLanguages();
   } catch (e) {
     console.warn(e);
     set({
@@ -248,6 +255,39 @@ export async function loadAll() {
 export function setActiveProfile(id: string | null) {
   writeLS(activeKey(), id);
   set({ activeProfileId: id });
+}
+
+/* ---------- Sprachen aufräumen ---------- */
+/** Lektionen in eine andere Sprache verschieben. */
+export function moveUnits(unitIds: string[], languageId: string) {
+  const ids = new Set(unitIds);
+  upsert("units", state.data.units.filter((u) => ids.has(u.id)).map((u) => ({ ...u, language_id: languageId })));
+}
+
+/** Alle Lektionen von `source` nach `target` verschieben und `source` löschen. */
+export function mergeLanguage(source: Language, target: Language) {
+  if (source.id === target.id) return;
+  moveUnits(state.data.units.filter((u) => u.language_id === source.id).map((u) => u.id), target.id);
+  remove("languages", [source]);
+}
+
+/** Gleichnamige Sprachen zu je einer zusammenführen. Behalten wird die mit den meisten Lektionen. */
+export function duplicateLanguages(): Language[][] {
+  const groups = new Map<string, Language[]>();
+  for (const l of state.data.languages) {
+    const k = l.name.trim().toLowerCase();
+    groups.set(k, [...(groups.get(k) ?? []), l]);
+  }
+  return [...groups.values()].filter((g) => g.length > 1);
+}
+export function mergeDuplicateLanguages(): number {
+  let merged = 0;
+  for (const group of duplicateLanguages()) {
+    const count = (l: Language) => state.data.units.filter((u) => u.language_id === l.id).length;
+    const [keep, ...rest] = [...group].sort((a, b) => count(b) - count(a) || (a.created_at ?? "").localeCompare(b.created_at ?? ""));
+    for (const l of rest) { mergeLanguage(l, keep); merged++; }
+  }
+  return merged;
 }
 
 /* ---------- Start-Sprachen ---------- */
