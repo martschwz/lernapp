@@ -9,7 +9,7 @@ Familien-Lern-App (Vokabeln + Mathe) mit Karteikasten. Die Familie pflegt den Co
 - Fotoerkennung: Supabase Edge Function `supabase/functions/scan-vocab` ruft die Claude API auf (Secret `ANTHROPIC_API_KEY`). Der Schlüssel darf nie in den Frontend-Code.
 
 ## Daten (`supabase/migrations/`)
-`profiles`, `languages` (frei anlegbar, mit Sonderzeichen, TTS-Code, Prüfmodus), `units` (Lektion, gehört zu Profil + Sprache), `cards`, `progress` (Karteikasten pro Profil, Schlüssel `item_key`: `card:<uuid>`, `mul:<reihe>:<faktor>`, `div:…`, `big:…`, `sq:<n>`), `activity` (Tagesstatistik), `family_settings` (Eltern-PIN, Migration 0002). Neue Tabellen aus späteren Migrationen in `OPTIONAL_TABLES` (store.ts) aufnehmen, damit die App auch ohne das Update weiterläuft.
+`profiles`, `languages` (frei anlegbar, mit Sonderzeichen, TTS-Code, Prüfmodus), `units` (Lektion, gehört zu Profil + Sprache), `cards`, `progress` (Karteikasten pro Profil, Schlüssel `item_key`: `card:<uuid>`, `irr:<verb>`, `mul:<reihe>:<faktor>`, `div:…`, `big:…`, `sq:<n>`), `activity` (Tagesstatistik), `family_settings` (Eltern-PIN, Migration 0002). Neue Tabellen aus späteren Migrationen in `OPTIONAL_TABLES` (store.ts) aufnehmen, damit die App auch ohne das Update weiterläuft.
 Schemaänderungen immer als neue Datei `supabase/migrations/000N_….sql` (idempotent) und dem Nutzer sagen, dass er sie im SQL Editor ausführen muss.
 
 ## Wichtige Dateien
@@ -17,6 +17,7 @@ Schemaänderungen immer als neue Datei `supabase/migrations/000N_….sql` (idemp
 - `src/lib/srs.ts` – Karteikasten (Fächer 0–6, Intervalle 0/0/1/3/9/29/90 Tage).
 - `src/lib/check.ts` – tolerante Antwortprüfung (Bedeutungen mit `;`, Tippfehler, Akzente).
 - `src/lib/math.ts` – Mathe-Themen und Aufgaben-Schlüssel.
+- `src/lib/verbs.ts` + `src/views/Verbs.tsx` – unregelmäßige englische Verben (eingebaute Liste, `basic` = Grundliste, Karteikasten-Schlüssel `irr:<infinitiv>`; strenge Prüfung ohne Tippfehler-Toleranz, `/` = gleichwertige Formen). Sichtbar ab Klasse 5 und für Erwachsene (`showVerbs`).
 - `src/components/Quiz.tsx` – gemeinsame Abfrage (Eintippen, Auswahl, Karteikarte, Zahlenblock).
 - `src/lib/pin.ts` + `src/components/PinModal.tsx` – Eltern-PIN (schützt Elternbereich, Lektion löschen/zurücksetzen, neues Profil) und optionale Profil-PIN (beim Profilwechsel; Eltern-PIN gilt immer). Nur SHA-256-Hash gespeichert, Kinderschutz statt Hochsicherheit.
 - `src/views/*` – Ansichten. Kindermodus (Klasse 1–4) über `body.kid`.
@@ -24,4 +25,4 @@ Schemaänderungen immer als neue Datei `supabase/migrations/000N_….sql` (idemp
 ## Regeln
 - Vor jedem Commit: `npx tsc --noEmit`, `npm test`, `npm run build`.
 - Texte in der App auf Deutsch, kindgerecht und kurz.
-- Geplante Erweiterungen: Lernwörter-Diktat (Deutsch, Vorlesen + Eintippen), Lernplan für Klassenarbeiten, Grammatik-Trainer (Latein-Deklinationen, unregelmäßige Verben), KI-Schnelleingabe (Wort → Übersetzung vorschlagen), eigene Tonaufnahmen und dritte Kartenseite (Schlesisch).
+- Geplante Erweiterungen: Lernwörter-Diktat (Deutsch, Vorlesen + Eintippen), Lernplan für Klassenarbeiten, Grammatik-Trainer (Latein-Deklinationen und -Konjugationen), KI-Schnelleingabe (Wort → Übersetzung vorschlagen), eigene Tonaufnahmen und dritte Kartenseite (Schlesisch).

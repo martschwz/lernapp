@@ -1,9 +1,10 @@
 import { useStore, type Profile } from "../lib/store";
-import { boxCounts, cardsOf, dueCount, langsOfProfile, progressMap } from "../lib/selectors";
+import { boxCounts, cardsOf, dueCount, langsOfProfile, progressMap, showVerbs } from "../lib/selectors";
 import { dayKey, isDue, streak } from "../lib/srs";
 import { allKeys, TOPICS } from "../lib/math";
 import { Kasten, Tag } from "../components/ui";
 import type { View } from "../App";
+import { verbStats } from "./Verbs";
 
 export function Home({ profile, go }: { profile: Profile; go: (v: View, opts?: { languageId?: string }) => void }) {
   const s = useStore((x) => x);
@@ -52,6 +53,16 @@ export function Home({ profile, go }: { profile: Profile; go: (v: View, opts?: {
             </section>
           );
         })}
+        {showVerbs(profile) && (() => {
+          const vs = verbStats(profile.id);
+          return (
+            <section className="card">
+              <div className="row"><Tag short="EN" color="#1f7a8c" /><h3>Unregelmäßige Verben</h3></div>
+              <p className="muted small">{vs.started ? `${vs.due} Verben fällig, ${vs.started} schon geübt.` : "go – went – gone: Hier übst du die unregelmäßigen Verben."}</p>
+              <button className="btn sm primary" onClick={() => go("verbs")}>Verben üben</button>
+            </section>
+          );
+        })()}
         {profile.subjects.includes("math") && (
           <section className="card">
             <div className="row"><Tag short="×" color="var(--accent)" /><h3>Mathe</h3></div>

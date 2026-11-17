@@ -65,3 +65,27 @@ describe("CSV wie aus Excel", () => {
     expect(parseDelimited("bell\tGlocke\t[bel]")).toEqual([["bell", "Glocke", "[bel]"]]);
   });
 });
+
+import { checkForm, VERBS } from "../verbs";
+describe("Unregelmäßige Verben", () => {
+  it("akzeptiert eine oder beide Formen", () => {
+    expect(checkForm("was", "was/were")).toBe(true);
+    expect(checkForm("were", "was/were")).toBe(true);
+    expect(checkForm("was/were", "was/were")).toBe(true);
+    expect(checkForm("burned", "burnt/burned")).toBe(true);
+  });
+  it("Klammern und 'to' sind freiwillig", () => {
+    expect(checkForm("dealt", "dealt (with)")).toBe(true);
+    expect(checkForm("dealt with", "dealt (with)")).toBe(true);
+    expect(checkForm("to wake up", "wake (up)")).toBe(true);
+  });
+  it("ist streng bei der Schreibweise", () => {
+    expect(checkForm("goed", "went")).toBe(false);
+    expect(checkForm("brough", "brought")).toBe(false);
+    expect(checkForm("", "went")).toBe(false);
+    expect(checkForm("was/wer", "was/were")).toBe(false);
+  });
+  it("hat keine doppelten Verben", () => {
+    expect(new Set(VERBS.map((v) => v.inf)).size).toBe(VERBS.length);
+  });
+});

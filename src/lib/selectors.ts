@@ -43,3 +43,6 @@ export function langsOfProfile(s: State, profileId: string): Language[] {
 }
 
 export const isKid = (grade: number) => grade > 0 && grade <= 4;
+
+/** Unregelmäßige Verben ab Klasse 5 und für Erwachsene, sobald Sprachen gelernt werden. */
+export const showVerbs = (p: { subjects: string[]; grade: number }) => p.subjects.includes("lang") && (p.grade === 0 || p.grade >= 5);

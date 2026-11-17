@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
 import { useStore } from "./lib/store";
-import { isKid } from "./lib/selectors";
+import { isKid, showVerbs } from "./lib/selectors";
 import { Login } from "./views/Login";
 import { ProfilePicker } from "./views/Profiles";
 import { Home } from "./views/Home";
 import { Learn, Words } from "./views/Vocab";
 import { Import } from "./views/Import";
 import { MathTrainer } from "./views/Math";
+import { VerbTrainer } from "./views/Verbs";
 import { Settings } from "./views/Settings";
 import { Toaster } from "./components/ui";
 import { PinModal } from "./components/PinModal";
 import { lockParent } from "./lib/pin";
 
-export type View = "home" | "learn" | "words" | "math" | "import" | "settings" | "pick";
+export type View = "home" | "learn" | "words" | "verbs" | "math" | "import" | "settings" | "pick";
 
 export default function App() {
   const authReady = useStore((s) => s.authReady);
@@ -39,6 +40,7 @@ export default function App() {
   const tabs: [View, string][] = profile ? [
     ["home", "Heute"],
     ...(profile.subjects.includes("lang") ? [["learn", "Vokabeln lernen"], ["words", "Vokabeln"]] as [View, string][] : []),
+    ...(showVerbs(profile) ? [["verbs", "Verben"]] as [View, string][] : []),
     ...(profile.subjects.includes("math") ? [["math", "Mathe"]] as [View, string][] : []),
     ...(profile.subjects.includes("lang") ? [["import", "Hinzufügen"]] as [View, string][] : []),
     ["settings", "Eltern"],
@@ -69,6 +71,7 @@ export default function App() {
             {view === "home" && <Home profile={profile} go={go} />}
             {view === "learn" && <Learn profile={profile} initialLanguageId={langId} onHome={() => go("home")} />}
             {view === "words" && <Words profile={profile} onLearnUnit={(u) => go("learn", { languageId: u.language_id })} />}
+            {view === "verbs" && <VerbTrainer profile={profile} onHome={() => go("home")} />}
             {view === "math" && <MathTrainer profile={profile} onHome={() => go("home")} />}
             {view === "import" && <Import profile={profile} onSaved={() => go("words")} />}
             {view === "settings" && <Settings />}
