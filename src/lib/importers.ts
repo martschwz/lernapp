@@ -23,8 +23,38 @@ export function parseText(text: string): Row[] {
   );
 }
 
+/** CSV/TSV mit Anführungszeichen (wie Excel sie speichert). Trennzeichen wird erkannt. */
+export function parseDelimited(text: string): Row[] {
+  text = text.replace(/^\uFEFF/, "");
+  const first = text.split(/\r?\n/, 1)[0] ?? "";
+  const count = (d: string) => first.split(d).length - 1;
+  const delim = ["\t", ";", ","].sort((a, b) => count(b) - count(a))[0];
+  const rows: string[][] = [];
+  let row: string[] = [], field = "", quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else field += c;
+    } else if (c === '"' && field === "") quoted = true;
+    else if (c === delim) { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); rows.push(row); row = []; field = "";
+    } else field += c;
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  return cleanRows(rows);
+}
+
 export async function parseFile(file: File): Promise<Row[]> {
-  if (/\.(csv|txt|tsv)$/i.test(file.name)) return parseText(await file.text());
+  if (/\.(csv|tsv)$/i.test(file.name)) {
+    const text = await file.text();
+    // Dateien im Format "Wort = Bedeutung" weiterhin wie eingefügter Text behandeln
+    return text.includes(" = ") && !text.includes('"') ? parseText(text) : parseDelimited(text);
+  }
+  if (/\.txt$/i.test(file.name)) return parseText(await file.text());
   const { default: readXlsxFile } = await import("read-excel-file");
   const rows = await readXlsxFile(file);
   return cleanRows(rows as unknown[][]);

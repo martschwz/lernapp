@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { checkAnswer } from "../check";
 import { nextState, streak, dayKey } from "../srs";
 import { allKeys, itemFromKey, plusMinusItem } from "../math";
-import { parseText } from "../importers";
+import { parseDelimited, parseText } from "../importers";
 
 describe("checkAnswer", () => {
   it("akzeptiert eine von mehreren Bedeutungen", () => expect(checkAnswer("Urlaub", "Ferien; Urlaub")).toBe("right"));
@@ -53,5 +53,15 @@ describe("Import", () => {
     expect(parseText("Englisch;Deutsch\nto arrive;ankommen\namicus = Freund = amici m\nbeach\tStrand")).toEqual([
       ["to arrive", "ankommen", ""], ["amicus", "Freund", "amici m"], ["beach", "Strand", ""],
     ]);
+  });
+});
+
+describe("CSV wie aus Excel", () => {
+  it("liest Semikolon-CSV mit Anführungszeichen", () => {
+    const csv = '\uFEFFEnglisch;Deutsch;Hinweis\r\nout of;"von; aus … heraus";[ˈaʊt əv]\r\n"say ""hi""";"Hallo sagen";\r\n';
+    expect(parseDelimited(csv)).toEqual([["out of", "von; aus … heraus", "[ˈaʊt əv]"], ['say "hi"', "Hallo sagen", ""]]);
+  });
+  it("liest Tabulator-getrennte Dateien", () => {
+    expect(parseDelimited("bell\tGlocke\t[bel]")).toEqual([["bell", "Glocke", "[bel]"]]);
   });
 });

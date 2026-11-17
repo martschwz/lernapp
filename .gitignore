@@ -2,3 +2,6 @@ node_modules
 dist
 .env*
 *.local
+
+# Abgetippte Buchvokabeln: urheberrechtlich geschützt, nicht veröffentlichen
+vokabeln/
